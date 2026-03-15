@@ -4,12 +4,12 @@ on:
   push:
     branches: [ main ]
   pull_request:
+    branches: [ main ]
 
 jobs:
 
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -20,59 +20,55 @@ jobs:
   test:
     runs-on: ubuntu-latest
     needs: build
-
     steps:
       - uses: actions/checkout@v3
 
       - name: Install dependencies
-        run: |
-          npm install
+        run: npm install
 
       - name: Run tests
-        run: |
-          npm test
+        run: npm test
 
   sast:
     runs-on: ubuntu-latest
     needs: test
-
     steps:
       - uses: actions/checkout@v3
 
       - name: Run SAST with SonarQube
-        run: echo "SAST scanning..."
+        run: |
+          echo "SAST scanning..."
+          # Här kan du lägga till t.ex. SonarCloud CLI-kommando
+          # sonar-scanner -Dsonar.projectKey=myproject -Dsonar.organization=myorg
 
   sca:
     runs-on: ubuntu-latest
     needs: test
-
     steps:
       - uses: actions/checkout@v3
 
       - name: Dependency Scan
-        run: echo "Scanning dependencies..."
+        run: |
+          echo "Scanning dependencies..."
+          # T.ex. npm audit eller OWASP Dependency-Check
+          npm audit --audit-level=high
 
   container_scan:
     runs-on: ubuntu-latest
     needs: build
-
     steps:
       - uses: actions/checkout@v3
 
-      - name: Build image
-        run: docker build -t myapp .
-
       - name: Scan container with Trivy
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: myapp
-          exit-code: 1
-          severity: CRITICAL,HIGH
+        uses: aquasecurity/trivy-action@v0
+with:
+  image-ref: myapp:latest
+  exit-code: 1
+  severity: CRITICAL,HIGH
 
   deploy:
     runs-on: ubuntu-latest
-    needs: container_scan
-
+    needs: [sca, sast, container_scan]
     steps:
       - name: Deploy step
         run: echo "Deploying to test environment..."
